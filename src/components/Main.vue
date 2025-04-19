@@ -1,8 +1,11 @@
 <template>
   <div class="app">
     <TopNav :isPlaying="isPlaying" @toggle-transport="toggleTransport" />
-    <SideNav :bpm="bpm" :isRecording="isRecording" :vocalUrl="vocalUrl" @start-recording="startRecording"
-      @stop-recording="stopRecording" @open-sample-dialog="showSampleDialog = true" @update:bpm="bpm = $event" />
+    <SideNav :bpm="bpm" :isRecording="isRecording" :vocalUrl="vocalUrl"
+      @start-recording="startRecording" @stop-recording="stopRecording" @open-sample-dialog="showSampleDialog = true"
+      @update:bpm="bpm = $event" v-model:columns="cols" />
+
+
     <main class="main">
       <StepGrid :steps="steps" :currentStep="currentStep" @toggle-step="toggleStep" @remove-row="removeRow" />
 
@@ -51,13 +54,14 @@ const groupedSamples = computed(() => {
 
 
 const rows = 4
-const cols = 8
+const cols = ref(8)
 const steps = ref(
   allSamples.value.slice(0, rows).map(sample => ({
     name: sample.name,
-    steps: Array(cols).fill(false),
+    steps: Array(cols.value).fill(false),
   }))
 )
+
 
 const bpm = ref(120)
 const currentStep = ref(0)
@@ -100,7 +104,8 @@ function scheduleTransport() {
       vocalPlayer.start(time)
     }
 
-    stepIndex.value = (stepIndex.value + 1) % cols
+    stepIndex.value = (stepIndex.value + 1) % cols.value
+
   }, '8n')
 
 }
@@ -171,12 +176,13 @@ const showSampleDialog = ref(false)
 function addSampleToGrid(sample) {
   steps.value.push({
     name: sample.name,
-    steps: Array(cols).fill(false),
+    steps: Array(cols.value).fill(false),
   })
 
   const newPlayer = new Tone.Player(sample.path).toDestination()
   players.value.push(newPlayer)
 }
+
 
 
 
@@ -198,6 +204,23 @@ function removeRow(rowIndex) {
   players.splice(rowIndex, 1)
   steps.value.splice(rowIndex, 1)
 }
+
+import { watch } from 'vue'
+
+watch(cols, (newColCount) => {
+  steps.value.forEach(row => {
+    const currentLength = row.steps.length
+    if (newColCount > currentLength) {
+      // Append additional false values
+      row.steps.push(...Array(newColCount - currentLength).fill(false))
+    } else if (newColCount < currentLength) {
+      // Truncate the row's steps to new length
+      row.steps.splice(newColCount)
+    }
+  })
+})
+
+
 
 </script>
 

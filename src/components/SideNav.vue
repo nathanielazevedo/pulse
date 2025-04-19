@@ -1,5 +1,12 @@
 <template>
   <aside class="side-nav">
+    <div class="columns-input">
+      <label for="cols-input">Steps:</label>
+      <input min="1" max="64" v-model.number="columnsLocal" @change="updateColumns" />
+
+
+    </div>
+
     <label class="bpm-slider">
       <div style="display: flex; justify-content: space-between;">
         BPM:
@@ -21,14 +28,25 @@
 </template>
 
 <script setup>
-defineProps({
-  bpm: Number,
-  isRecording: Boolean,
-  vocalUrl: String
+import { ref, watch } from 'vue'
+
+const props = defineProps({
+  columns: Number
+})
+const emit = defineEmits(['update:columns'])
+
+const columnsLocal = ref(props.columns)
+
+watch(() => props.columns, (newVal) => {
+  columnsLocal.value = newVal
 })
 
-defineEmits(['update:bpm'])
+function updateColumns() {
+  emit('update:columns', columnsLocal.value)
+}
 </script>
+
+
 
 <style scoped>
 .side-nav {
@@ -114,5 +132,38 @@ defineEmits(['update:bpm'])
     inset 1px 1px 2px rgba(0, 0, 0, 0.5),
     0 0 2px rgba(0, 0, 0, 0.7);
   cursor: pointer;
+}
+
+.columns-input {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  font-weight: bold;
+  color: #ccc;
+}
+
+.columns-input label {
+  font-size: 0.9rem;
+}
+
+.columns-input input{
+  background-color: #333;
+  color: #eee;
+  border: 1px solid #555;
+  padding: 0.4rem 0.6rem;
+  border-radius: 6px;
+  outline: none;
+  width: 100%;
+  box-shadow:
+    inset 0 0 2px #444,
+    0 1px 1px rgba(255, 255, 255, 0.2);
+  transition: border 0.2s, box-shadow 0.2s;
+}
+
+.columns-input input[type="number"]:focus {
+  border-color: #888;
+  box-shadow:
+    0 0 5px rgba(255, 255, 255, 0.3),
+    inset 0 0 2px #666;
 }
 </style>
