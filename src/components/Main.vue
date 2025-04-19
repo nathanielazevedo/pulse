@@ -4,10 +4,12 @@
     <SideNav :bpm="bpm" :isRecording="isRecording" :vocalUrl="vocalUrl" @start-recording="startRecording"
       @stop-recording="stopRecording" @open-sample-dialog="showSampleDialog = true" @update:bpm="bpm = $event" />
     <main class="main">
-      <StepGrid :steps="steps" :currentStep="currentStep" @toggle-step="toggleStep" />
+      <StepGrid :steps="steps" :currentStep="currentStep" @toggle-step="toggleStep" @remove-row="removeRow" />
+
     </main>
-    <SampleDialog v-if="showSampleDialog" :samples="allSamples" @close="showSampleDialog = false"
+    <SampleDialog v-if="showSampleDialog" :grouped-samples="groupedSamples" @close="showSampleDialog = false"
       @add-sample="addSampleToGrid" @play-sample="playSample" />
+
   </div>
 </template>
 
@@ -20,13 +22,33 @@ import StepGrid from './StepGrid.vue'
 import SampleDialog from './SampleDialog.vue'
 
 // Load samples from folder
-const rawSampleModules = import.meta.glob('/src/assets/samples/*.wav', { eager: true })
+const rawSampleModules = import.meta.glob('../assets/samples/**/*.wav', { eager: true })
+console.log(rawSampleModules)
 const allSamples = ref(
   Object.entries(rawSampleModules).map(([path, module]) => {
-    const name = path.split('/').pop().replace('.wav', '')
-    return { name, path: module.default }
+    const segments = path.split('/')
+    const category = segments[segments.length - 2] // folder name
+    const fileName = segments[segments.length - 1]
+    const name = fileName.replace('.wav', '')
+    return { name, path: module.default, category }
   })
 )
+
+import { computed } from 'vue'
+
+const groupedSamples = computed(() => {
+  const groups = {}
+  for (const sample of allSamples.value) {
+    if (!groups[sample.category]) {
+      groups[sample.category] = []
+    }
+    groups[sample.category].push(sample)
+  }
+  return groups
+})
+
+
+
 
 const rows = 4
 const cols = 8
@@ -164,6 +186,19 @@ function playSample(sample) {
     onload: () => tempPlayer.start()
   }).toDestination()
 }
+
+function removeRow(rowIndex) {
+  // Stop the player if it's currently running
+  const player = players[rowIndex]
+  if (player && player.state === 'started') {
+    player.stop()
+  }
+
+  // Remove player and step row
+  players.splice(rowIndex, 1)
+  steps.value.splice(rowIndex, 1)
+}
+
 </script>
 
 

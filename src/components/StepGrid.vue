@@ -1,7 +1,11 @@
 <template>
   <div class="grid">
     <div v-for="(row, rowIndex) in steps" :key="rowIndex" class="row">
-      <div class="row-label">{{ row.name }}</div>
+      <div class="row-label">
+        {{ row.name }}
+        <button class="remove-btn" @click="$emit('remove-row', rowIndex)">×</button>
+      </div>
+
       <button v-for="(step, colIndex) in row.steps" :key="colIndex" :class="{
         active: step,
         playing: colIndex === currentStep
@@ -68,5 +72,21 @@ button.active {
 
 button.playing {
   outline: 2px solid #06528b;
+}
+
+.remove-btn {
+  background: none;
+  border: none;
+  color: #777;
+  margin-top: 8px;
+  cursor: pointer;
+  font-size: 1.5rem;
+  line-height: 1;
+  padding: 0;
+  transition: color 0.2s ease;
+}
+
+.remove-btn:hover {
+  color: #ff4d4d;
 }
 </style>
