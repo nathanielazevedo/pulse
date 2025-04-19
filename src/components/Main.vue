@@ -1,8 +1,8 @@
 <template>
   <div class="app">
-    <TopNav :isPlaying="isPlaying" @toggle-transport="toggleTransport" :bpm="bpm" />
+    <TopNav :isPlaying="isPlaying" @toggle-transport="toggleTransport" />
     <SideNav :bpm="bpm" :isRecording="isRecording" :vocalUrl="vocalUrl" @start-recording="startRecording"
-      @stop-recording="stopRecording" @open-sample-dialog="showSampleDialog = true" />
+      @stop-recording="stopRecording" @open-sample-dialog="showSampleDialog = true" @update:bpm="bpm = $event" />
     <main class="main">
       <StepGrid :steps="steps" :currentStep="currentStep" @toggle-step="toggleStep" />
     </main>
@@ -30,37 +30,49 @@ const allSamples = ref(
 
 const rows = 4
 const cols = 8
-const steps = ref(Array.from({ length: rows }, () => Array(cols).fill(false)))
+const steps = ref(
+  allSamples.value.slice(0, rows).map(sample => ({
+    name: sample.name,
+    steps: Array(cols).fill(false),
+  }))
+)
+
 const bpm = ref(120)
 const currentStep = ref(0)
 let players = []
-// const players = allSamples.value.slice(0, rows).map(sample => new Tone.Player(sample.path).toDestination())
 
+console.log(bpm)
 async function initPlayers() {
   console.log('initing players')
-  const slice = allSamples.value.slice(0, rows)
 
-  players.value = allSamples.value.map(sample => new Tone.Player(sample.path).toDestination())
-
+  players.value = steps.value.map(row => {
+    const sample = allSamples.value.find(s => s.name === row.name)
+    if (!sample) {
+      console.warn(`Sample not found for: ${row.name}`)
+      return null
+    }
+    return new Tone.Player(sample.path).toDestination()
+  })
 }
+
 const stepIndex = ref(0)
 
 function scheduleTransport() {
-  console.log('scheduling transport')
   Tone.Transport.scheduleRepeat((time) => {
     currentStep.value = stepIndex.value
 
-    steps.value.forEach((row, rowIndex) => {
+    steps.value.forEach((rowObj, rowIndex) => {
       const player = players.value[rowIndex]
-      if (row[stepIndex.value] && player && player.loaded) {
+      if (rowObj.steps[stepIndex.value] && player && player.loaded) {
         try {
           player.stop()
           player.start(time)
         } catch (err) {
-          console.error(`Player at row ${rowIndex} failed to start at step ${stepIndex.value}:`, err)
+          console.error(`Player ${rowObj.name} at row ${rowIndex} failed:`, err)
         }
       }
     })
+
 
     if (vocalPlayer && vocalReady && stepIndex.value === 0) {
       vocalPlayer.start(time)
@@ -71,15 +83,15 @@ function scheduleTransport() {
 
 }
 
-function toggleStep(row, col) {
-  steps.value[row][col] = !steps.value[row][col]
+function toggleStep(rowIndex, colIndex) {
+  steps.value[rowIndex].steps[colIndex] = !steps.value[rowIndex].steps[colIndex]
 }
+
 
 const isPlaying = ref(false)
 let initialized = false
 
 async function toggleTransport() {
-  console.log('toggling transport')
   await initPlayers()
   await Tone.start()
 
@@ -101,11 +113,6 @@ async function toggleTransport() {
 
   isPlaying.value = !isPlaying.value
 }
-
-
-
-
-
 
 
 // Recording logic
@@ -140,15 +147,15 @@ function stopRecording() {
 const showSampleDialog = ref(false)
 
 function addSampleToGrid(sample) {
-  // 1. Add a new empty row to the grid
-  steps.value.push(Array(cols).fill(false))
+  steps.value.push({
+    name: sample.name,
+    steps: Array(cols).fill(false),
+  })
 
-  // 2. Create a new player for the selected sample
   const newPlayer = new Tone.Player(sample.path).toDestination()
-
-  // 3. Add it to the players list
   players.value.push(newPlayer)
 }
+
 
 
 function playSample(sample) {

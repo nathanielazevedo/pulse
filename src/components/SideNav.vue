@@ -5,7 +5,7 @@
         BPM:
         <span>{{ bpm }}</span>
       </div>
-      <input type="range" min="60" max="180" :value="bpm" @input="$emit('update:bpm', +$event.target.value)" />
+      <input type="range" min="60" max="180" :value="bpm" @input="$emit('update:bpm', Number($event.target.value))" />
     </label>
 
     <button @click="$emit('open-sample-dialog')">Beats</button>
@@ -26,6 +26,8 @@ defineProps({
   isRecording: Boolean,
   vocalUrl: String
 })
+
+defineEmits(['update:bpm'])
 </script>
 
 <style scoped>

@@ -1,10 +1,13 @@
 <template>
   <div class="grid">
     <div v-for="(row, rowIndex) in steps" :key="rowIndex" class="row">
-      <button v-for="(step, colIndex) in row" :key="colIndex"
-        :class="{ active: step, playing: colIndex === currentStep }"
-        @click="$emit('toggle-step', rowIndex, colIndex)" />
+      <div class="row-label">{{ row.name }}</div>
+      <button v-for="(step, colIndex) in row.steps" :key="colIndex" :class="{
+        active: step,
+        playing: colIndex === currentStep
+      }" @click="$emit('toggle-step', rowIndex, colIndex)" />
     </div>
+
   </div>
 </template>
 
@@ -25,12 +28,18 @@ defineProps({
   height: 100%;
   width: 100%;
   padding: 20px;
+  padding-left: 10px;
 }
 
 .row {
   display: flex;
   flex-grow: 1;
   gap: 10px;
+}
+
+.row-label{
+  color: grey;
+  font-size: 10px;
 }
 
 .row button {
@@ -45,7 +54,14 @@ defineProps({
 }
 
 button.active {
-  background-color: #00b894;
+    background-color: #029779;
+  /* background: radial-gradient(circle at center,
+      rgba(187, 186, 186, 0.8) 0%,
+      rgba(129, 128, 128, 0.5) 10%,
+      rgba(131, 129, 129, 0.2) 30%,
+      rgba(131, 129, 129, 0.1) 50%,
+      rgba(255, 255, 255, 0.0) 100%);
+  background-color: #333; */
 }
 
 button.playing {

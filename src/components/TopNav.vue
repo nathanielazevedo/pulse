@@ -1,6 +1,6 @@
 <template>
   <header class="top-nav">
-    <h2 style="font-weight: 100; color: grey;">Pulse</h2>
+    <h2 style="font-weight: 400; color: grey;">PULSE</h2>
     <div class="controls">
       <button class="metal-button" @click="$emit('toggle-transport')" title="Play / Pause">
         <span v-if="isPlaying">⏹</span>
