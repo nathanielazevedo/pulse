@@ -24,8 +24,7 @@ defineProps({
   flex-direction: column;
   justify-content: stretch;
   align-items: stretch;
-  gap: 10px;
-  height: 100%;
+  gap: 10px; height: 100%;
   width: 100%;
   padding: 20px;
   padding-left: 10px;
@@ -39,7 +38,10 @@ defineProps({
 
 .row-label{
   color: grey;
-  font-size: 10px;
+  font-size: 12px;
+  max-width: 100px;
+  min-width: 100px;
+  padding-top: 2px;
 }
 
 .row button {
