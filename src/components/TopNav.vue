@@ -1,6 +1,16 @@
 <template>
   <header class="top-nav">
     <h2 style="font-weight: 400; color: grey;">PULSE</h2>
+
+    <div class="tab-buttons">
+      <button :class="{ active: activeTab === 'drums' }" @click="$emit('update:activeTab', 'drums')">
+        Drums
+      </button>
+      <button :class="{ active: activeTab === 'melody' }" @click="$emit('update:activeTab', 'melody')">
+        Melody
+      </button>
+    </div>
+
     <div class="controls">
       <button class="metal-button" @click="$emit('toggle-transport')" title="Play / Pause">
         <span v-if="isPlaying">⏹</span>
@@ -13,8 +23,12 @@
 <script setup>
 defineProps({
   bpm: Number,
-  isPlaying: Boolean
+  isPlaying: Boolean,
+  activeTab: String,
 })
+
+defineEmits(['toggle-transport', 'update:activeTab'])
+
 </script>
 
 <style scoped>
@@ -82,5 +96,36 @@ defineProps({
   box-shadow:
     inset 1px 1px 2px rgba(0, 0, 0, 0.6),
     inset -1px -1px 2px rgba(255, 200, 200, 0.2);
+}
+
+.tab-buttons {
+  display: flex;
+  gap: 8px;
+  background: #1e1e1e;
+  padding: 6px;
+  border-radius: 12px;
+  border: 1px solid #444;
+}
+
+.tab-buttons button {
+  background: #2c2c2c;
+  color: #aaa;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-weight: bold;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.tab-buttons button:hover {
+  background: #3c3c3c;
+  color: #eee;
+}
+
+.tab-buttons button.active {
+  background: #029779;
+  color: #000;
 }
 </style>

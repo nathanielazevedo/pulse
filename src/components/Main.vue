@@ -1,13 +1,33 @@
 <template>
   <div class="app">
-    <TopNav :isPlaying="isPlaying" @toggle-transport="toggleTransport" />
-    <SideNav :bpm="bpm" :isRecording="isRecording" :vocalUrl="vocalUrl"
-      @start-recording="startRecording" @stop-recording="stopRecording" @open-sample-dialog="showSampleDialog = true"
-      @update:bpm="bpm = $event" v-model:columns="cols" />
+    <TopNav :isPlaying="isPlaying" :activeTab="activeTab" @toggle-transport="toggleTransport"
+      @update:activeTab="activeTab = $event" />
+
+    <SideNav :bpm="bpm" :isRecording="isRecording" :vocalUrl="vocalUrl" @start-recording="startRecording"
+      @stop-recording="stopRecording" @open-sample-dialog="showSampleDialog = true" @update:bpm="bpm = $event"
+      v-model:columns="cols" />
+
 
 
     <main class="main">
-      <StepGrid :steps="steps" :currentStep="currentStep" @toggle-step="toggleStep" @remove-row="removeRow" />
+      <template v-if="activeTab === 'drums'">
+        <StepGrid :steps="steps" :currentStep="currentStep" @toggle-step="toggleStep" @remove-row="removeRow" />
+      </template>
+
+      <template v-else>
+        <div class="melody-controls">
+          <!-- <label for="synth-select">Melody Instrument:</label> -->
+          <select v-model="selectedSynth">
+            <option v-for="opt in synthOptions" :key="opt.value" :value="opt.value">
+              {{ opt.label }}
+            </option>
+          </select>
+
+        </div>
+
+        <MelodyGrid :melodySteps="melodySteps" :currentStep="currentStep" @toggle-note="toggleMelodyStep" />
+      </template>
+
 
     </main>
     <SampleDialog v-if="showSampleDialog" :grouped-samples="groupedSamples" @close="showSampleDialog = false"
@@ -23,10 +43,81 @@ import TopNav from './TopNav.vue'
 import SideNav from './SideNav.vue'
 import StepGrid from './StepGrid.vue'
 import SampleDialog from './SampleDialog.vue'
+import MelodyGrid from './MelodyGrid.vue'
+
+const synthOptions = [
+  { label: 'Classic Synth', value: 'Synth' },
+  { label: 'Pluck Synth', value: 'PluckSynth' },
+  { label: 'Duo Synth', value: 'DuoSynth' },
+  { label: 'Mono Synth', value: 'MonoSynth' },
+  { label: 'FM Synth', value: 'FMSynth' },
+  { label: 'AM Synth', value: 'AMSynth' },
+  { label: 'Membrane Synth', value: 'MembraneSynth' },
+  { label: 'Piano (Sampler)', value: 'PianoSampler' },
+  { label: 'Guitar (Sampler)', value: 'GuitarSampler' },
+]
+
+const selectedSynth = ref('PluckSynth')
+
+
+
+const activeTab = ref('drums')
 
 // Load samples from folder
 const rawSampleModules = import.meta.glob('../assets/samples/**/*.wav', { eager: true })
-console.log(rawSampleModules)
+
+
+let melodySynth = null
+
+function createMelodySynth(type) {
+  if (melodySynth) melodySynth.dispose()
+
+  switch (type) {
+    case 'PluckSynth':
+      melodySynth = new Tone.PluckSynth().toDestination()
+      break
+    case 'DuoSynth':
+      melodySynth = new Tone.DuoSynth().toDestination()
+      break
+    case 'MonoSynth':
+      melodySynth = new Tone.MonoSynth().toDestination()
+      break
+    case 'FMSynth':
+      melodySynth = new Tone.FMSynth().toDestination()
+      break
+    case 'AMSynth':
+      melodySynth = new Tone.AMSynth().toDestination()
+      break
+    case 'MembraneSynth':
+      melodySynth = new Tone.MembraneSynth().toDestination()
+      break
+    case 'PianoSampler':
+      melodySynth = new Tone.Sampler({
+        C4: '/samples/piano/C4.wav',
+        D4: '/samples/piano/D4.wav',
+      }).toDestination()
+
+    case 'GuitarSampler':
+      melodySynth = new Tone.Sampler({
+        C4: '/samples/guitar/C4.wav',
+      }).toDestination()
+      break
+    case 'Synth':
+    default:
+      melodySynth = new Tone.Synth().toDestination()
+      break
+  }
+}
+
+
+watch(selectedSynth, (newType) => {
+  createMelodySynth(newType)
+})
+
+// Create it once on init
+createMelodySynth(selectedSynth.value)
+
+
 const allSamples = ref(
   Object.entries(rawSampleModules).map(([path, module]) => {
     const segments = path.split('/')
@@ -36,6 +127,22 @@ const allSamples = ref(
     return { name, path: module.default, category }
   })
 )
+
+const cols = ref(8)
+// MELODY
+const melodySteps = ref([
+  { note: 'C4', steps: Array(cols.value).fill(false) },
+  { note: 'D4', steps: Array(cols.value).fill(false) },
+  { note: 'E4', steps: Array(cols.value).fill(false) },
+  { note: 'F4', steps: Array(cols.value).fill(false) },
+  { note: 'G4', steps: Array(cols.value).fill(false) },
+  { note: 'A4', steps: Array(cols.value).fill(false) },
+  { note: 'B4', steps: Array(cols.value).fill(false) },
+])
+
+function toggleMelodyStep(row, col) {
+  melodySteps.value[row].steps[col] = !melodySteps.value[row].steps[col]
+}
 
 import { computed } from 'vue'
 
@@ -54,7 +161,6 @@ const groupedSamples = computed(() => {
 
 
 const rows = 4
-const cols = ref(8)
 const steps = ref(
   allSamples.value.slice(0, rows).map(sample => ({
     name: sample.name,
@@ -83,10 +189,22 @@ async function initPlayers() {
 
 const stepIndex = ref(0)
 
+function triggerMelodyNote(note, time) {
+  if (!melodySynth) return
+
+  if (selectedSynth.value === 'PianoSampler') {
+    melodySynth.triggerAttack(note, time)
+  } else {
+    melodySynth.triggerAttackRelease(note, '8n', time)
+  }
+}
+
+
 function scheduleTransport() {
   Tone.Transport.scheduleRepeat((time) => {
     currentStep.value = stepIndex.value
 
+    // Drums
     steps.value.forEach((rowObj, rowIndex) => {
       const player = players.value[rowIndex]
       if (rowObj.steps[stepIndex.value] && player && player.loaded) {
@@ -99,16 +217,30 @@ function scheduleTransport() {
       }
     })
 
-
+    // Vocals (only trigger once per loop)
     if (vocalPlayer && vocalReady && stepIndex.value === 0) {
       vocalPlayer.start(time)
     }
 
+    // Melody notes
+    melodySteps.value.forEach((row) => {
+      if (row.steps[stepIndex.value]) {
+        triggerMelodyNote(row.note, time)
+      }
+    })
+
+
+    // Move to next step
     stepIndex.value = (stepIndex.value + 1) % cols.value
-
   }, '8n')
-
 }
+
+
+const sampler = new Tone.Sampler({
+  C4: '/samples/piano/C4.wav',
+  D4: '/samples/piano/D4.wav',
+}).toDestination()
+
 
 function toggleStep(rowIndex, colIndex) {
   steps.value[rowIndex].steps[colIndex] = !steps.value[rowIndex].steps[colIndex]
@@ -208,17 +340,27 @@ function removeRow(rowIndex) {
 import { watch } from 'vue'
 
 watch(cols, (newColCount) => {
+  // Resize drums
   steps.value.forEach(row => {
-    const currentLength = row.steps.length
-    if (newColCount > currentLength) {
-      // Append additional false values
-      row.steps.push(...Array(newColCount - currentLength).fill(false))
-    } else if (newColCount < currentLength) {
-      // Truncate the row's steps to new length
+    const len = row.steps.length
+    if (newColCount > len) {
+      row.steps.push(...Array(newColCount - len).fill(false))
+    } else if (newColCount < len) {
+      row.steps.splice(newColCount)
+    }
+  })
+
+  // Resize melody
+  melodySteps.value.forEach(row => {
+    const len = row.steps.length
+    if (newColCount > len) {
+      row.steps.push(...Array(newColCount - len).fill(false))
+    } else if (newColCount < len) {
       row.steps.splice(newColCount)
     }
   })
 })
+
 
 
 
@@ -245,4 +387,20 @@ watch(cols, (newColCount) => {
   overflow: hidden;
 }
 
+.melody-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 0px 0px;
+  font-size: 14px;
+  /* color: #ccc; */
+}
+
+.melody-controls select {
+  background: #2c2c2c;
+  color: rgb(186, 186, 186);
+  border: 0.5px solid #444;
+  padding: 8px 50px;
+  border-radius: 4px;
+}
 </style>
